@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LatestResponse",
+  "type": "object",
+  "required": [
+    "round"
+  ],
+  "properties": {
+    "round": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}
