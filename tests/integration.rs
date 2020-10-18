@@ -55,7 +55,7 @@ fn verify_valid() {
     let gas_before = deps.get_gas_left();
 
     let info = mock_info("anyone", &[]);
-    let msg = HandleMsg::Verify {
+    let msg = HandleMsg::Add {
         // curl -sS https://drand.cloudflare.com/public/72785
         round: 72785,
         previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),
@@ -79,7 +79,7 @@ fn verify_invalid() {
     let gas_before = deps.get_gas_left();
 
     let info = mock_info("anyone", &[]);
-    let msg = HandleMsg::Verify {
+    let msg = HandleMsg::Add {
         // curl -sS https://drand.cloudflare.com/public/72785
         round: 42,
         previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),

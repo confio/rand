@@ -2,10 +2,10 @@ use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, MessageInfo, Querier,
     StdResult, Storage,
 };
-use drand_verify::{g1_from_fixed, verify};
+use drand_verify::{derive_randomness, g1_from_fixed, verify};
 
 use crate::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
-use crate::state::{config, config_read, State};
+use crate::state::{beacons_storage, config, config_read, State};
 
 // $ node
 // > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
@@ -29,21 +29,22 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     _env: Env,
     _info: MessageInfo,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::Verify {
+        HandleMsg::Add {
             round,
             previous_signature,
             signature,
-        } => try_verify(round, previous_signature, signature),
+        } => try_add(deps, round, previous_signature, signature),
     }
 }
 
-pub fn try_verify(
+pub fn try_add<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
     round: u64,
     previous_signature: Binary,
     signature: Binary,
@@ -56,6 +57,11 @@ pub fn try_verify(
         signature.as_slice(),
     )
     .unwrap();
+
+    if valid {
+        let randomness = derive_randomness(&signature);
+        beacons_storage(&mut deps.storage).set(&round.to_be_bytes(), &randomness);
+    }
 
     let mut response = HandleResponse::default();
     let mut data: Vec<u8> = Vec::new();
@@ -85,7 +91,7 @@ fn query_latest<S: Storage, A: Api, Q: Querier>(
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{coins, from_binary, ReadonlyStorage};
 
     #[test]
     fn proper_initialization() {
@@ -103,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn verify() {
+    fn add_verifies_and_stores_randomness() {
         let mut deps = mock_dependencies(&coins(2, "token"));
 
         let info = mock_info("creator", &coins(2, "token"));
@@ -111,7 +117,7 @@ mod tests {
         let _res = init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &coins(2, "token"));
-        let msg = HandleMsg::Verify {
+        let msg = HandleMsg::Add {
             // curl -sS https://drand.cloudflare.com/public/72785
             round: 72785,
             previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),
@@ -119,5 +125,15 @@ mod tests {
         };
         let res = handle(&mut deps, mock_env(), info, msg).unwrap();
         assert_eq!(res.data.unwrap().as_slice(), [0x01]);
+
+        let value = deps
+            .storage
+            .get(b"\x00\x07beacons\x00\x00\x00\x00\x00\x01\x1c\x51")
+            .unwrap();
+        assert_eq!(
+            value,
+            hex::decode("8b676484b5fb1f37f9ec5c413d7d29883504e5b669f604a1ce68b3388e9ae3d9")
+                .unwrap()
+        );
     }
 }
