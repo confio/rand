@@ -342,7 +342,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "drand-verify"
 version = "0.1.0"
-source = "git+https://github.com/CosmWasm/drand-verify?rev=3c90fc01537b95c53d08f6e1102e934db15d263b#3c90fc01537b95c53d08f6e1102e934db15d263b"
+source = "git+https://github.com/CosmWasm/drand-verify?rev=fabe84cf81b22c378f4faa4c60d8380c70c61cc7#fabe84cf81b22c378f4faa4c60d8380c70c61cc7"
 dependencies = [
  "paired",
  "sha2",
@@ -780,6 +780,7 @@ dependencies = [
  "hex",
  "schemars",
  "serde",
+ "thiserror",
 ]
 
 [[package]]

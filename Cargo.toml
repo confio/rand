@@ -37,9 +37,10 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 [dependencies]
 cosmwasm-std = { version = "0.11.1" }
 cosmwasm-storage = { version = "0.11.1" }
-drand-verify = { git = "https://github.com/CosmWasm/drand-verify", rev = "3c90fc01537b95c53d08f6e1102e934db15d263b" }
+drand-verify = { git = "https://github.com/CosmWasm/drand-verify", rev = "fabe84cf81b22c378f4faa4c60d8380c70c61cc7" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+thiserror = "1.0"
 
 [dev-dependencies]
 cosmwasm-vm = { version = "0.11.1", default-features = false }
