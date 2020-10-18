@@ -40,7 +40,6 @@ cosmwasm-storage = { version = "0.11.1" }
 drand-verify = { git = "https://github.com/CosmWasm/drand-verify", rev = "3c90fc01537b95c53d08f6e1102e934db15d263b" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
 
 [dev-dependencies]
 cosmwasm-vm = { version = "0.11.1", default-features = false }
