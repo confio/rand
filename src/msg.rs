@@ -27,4 +27,5 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct LatestResponse {
     pub round: u64,
+    pub randomness: Binary,
 }

@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{
-    prefixed, singleton, singleton_read, PrefixedStorage, ReadonlySingleton, Singleton,
+    prefixed, prefixed_read, singleton, singleton_read, PrefixedStorage, ReadonlyPrefixedStorage,
+    ReadonlySingleton, Singleton,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -24,4 +25,8 @@ pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, State> {
 
 pub fn beacons_storage<S: Storage>(storage: &mut S) -> PrefixedStorage<S> {
     prefixed(storage, BEACONS_KEY)
+}
+
+pub fn beacons_storage_read<S: Storage>(storage: &S) -> ReadonlyPrefixedStorage<S> {
+    prefixed_read(storage, BEACONS_KEY)
 }

@@ -35,8 +35,8 @@ cranelift = ["cosmwasm-vm/default-cranelift"]
 singlepass = ["cosmwasm-vm/default-singlepass"]
 
 [dependencies]
-cosmwasm-std = { version = "0.11.1" }
-cosmwasm-storage = { version = "0.11.1" }
+cosmwasm-std = { version = "0.11.1", features = ["iterator"] }
+cosmwasm-storage = { version = "0.11.1", features = ["iterator"] }
 drand-verify = { git = "https://github.com/CosmWasm/drand-verify", rev = "fabe84cf81b22c378f4faa4c60d8380c70c61cc7" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

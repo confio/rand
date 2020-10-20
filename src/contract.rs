@@ -1,12 +1,12 @@
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, MessageInfo, Querier,
-    StdResult, Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, MessageInfo, Order, Querier,
+    ReadonlyStorage, StdResult, Storage,
 };
 use drand_verify::{derive_randomness, g1_from_fixed, verify};
 
-use crate::errors::HandleError;
+use crate::errors::{HandleError, QueryError};
 use crate::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
-use crate::state::{beacons_storage, config, config_read, State};
+use crate::state::{beacons_storage, beacons_storage_read, config, State};
 
 // $ node
 // > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
@@ -75,17 +75,33 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     _env: Env,
     msg: QueryMsg,
-) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Latest {} => to_binary(&query_latest(deps)?),
-    }
+) -> Result<Binary, QueryError> {
+    let response = match msg {
+        QueryMsg::Latest {} => to_binary(&query_latest(deps)?)?,
+    };
+    Ok(response)
 }
 
 fn query_latest<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<LatestResponse> {
-    let state = config_read(&deps.storage).load()?;
-    Ok(LatestResponse { round: state.round })
+) -> Result<LatestResponse, QueryError> {
+    let store = beacons_storage_read(&deps.storage);
+    let mut iter = store.range(None, None, Order::Descending);
+    let (key, value) = iter.next().ok_or_else(|| QueryError::NoBeacon {})?;
+
+    Ok(LatestResponse {
+        round: u64::from_be_bytes(copy_to_array(&key)),
+        randomness: value.into(),
+    })
+}
+
+fn copy_to_array<A>(slice: &[u8]) -> A
+where
+    A: Sized + Default + AsMut<[u8]>,
+{
+    let mut a = Default::default();
+    <A as AsMut<[u8]>>::as_mut(&mut a).copy_from_slice(slice);
+    a
 }
 
 #[cfg(test)]
@@ -103,10 +119,6 @@ mod tests {
 
         let res = init(&mut deps, mock_env(), info, msg).unwrap();
         assert_eq!(res.messages.len(), 0);
-
-        let res = query(&deps, mock_env(), QueryMsg::Latest {}).unwrap();
-        let value: LatestResponse = from_binary(&res).unwrap();
-        assert_eq!(value.round, 17);
     }
 
     #[test]
@@ -184,5 +196,89 @@ mod tests {
             HandleError::InvalidSignature {} => {}
             err => panic!("Unexpected error: {:?}", err),
         }
+    }
+
+    #[test]
+    fn query_latest_fails_when_no_beacon_exists() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg { round: 17 };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        let result = query(&mut deps, mock_env(), QueryMsg::Latest {});
+        match result.unwrap_err() {
+            QueryError::NoBeacon {} => {}
+            err => panic!("Unexpected error: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn query_latest_returns_latest_beacon() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg { round: 17 };
+        let _res = init(&mut deps, mock_env(), info, msg).unwrap();
+
+        // Add first beacon
+
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/42 | jq
+            round: 42,
+            previous_signature: hex::decode("a418fccbfaa0c84aba8cbcd4e3c0555170eb2382dfed108ecfc6df249ad43efe00078bdcb5060fe2deed4731ca5b4c740069aaf77927ba59c5870ab3020352aca3853adfdb9162d40ec64f71b121285898e28cdf237e982ac5c4deb287b0d57b").unwrap().into(),
+            signature: hex::decode("9469186f38e5acdac451940b1b22f737eb0de060b213f0326166c7882f2f82b92ce119bdabe385941ef46f72736a4b4d02ce206e1eb46cac53019caf870080fede024edcd1bd0225eb1335b83002ae1743393e83180e47d9948ab8ba7568dd99").unwrap().into(),
+        };
+        handle(&mut deps, mock_env(), mock_info("anyone", &[]), msg).unwrap();
+
+        let latest: LatestResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Latest {}).unwrap()).unwrap();
+        assert_eq!(latest.round, 42);
+        assert_eq!(
+            latest.randomness,
+            hex::decode("a9f12c5869d05e084d1741957130e1d0bf78a8ca9a8deb97c47cac29aae433c6")
+                .unwrap()
+                .into()
+        );
+
+        // Adding higher round updated the latest value
+
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/45 | jq
+            round: 45,
+            previous_signature: hex::decode("a45dadaa23a0e70b06c297256c1bbdbcb915185c4bd2e0b6841e62f1b44264b82c8fc2ab97194e26ad90da55992d7c1e0cf0e58e17f91849aaecf545713b91efdebcb4cce06d3a0fcbabd72a8ab06050a3971898131e9026f29513680b99952a").unwrap().into(),
+            signature: hex::decode("9280e40ac60dea6fcd936adbf69cae5c0add37fd161e036d34abd190099ddec975d15f9684d8875e4a69f5fe8ff9dde30fc29510fadde729a7d3b5522bbeddc4d2a08935025572daeee7d0130e55f51ff6d0dbbd15fc700151b420577072a801").unwrap().into(),
+        };
+        handle(&mut deps, mock_env(), mock_info("anyone", &[]), msg).unwrap();
+
+        let latest: LatestResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Latest {}).unwrap()).unwrap();
+        assert_eq!(latest.round, 45);
+        assert_eq!(
+            latest.randomness,
+            hex::decode("bfef28c6f445af5eedcf9de596a0bdd95b7e285aedefd17d70e1fac668c5f05b")
+                .unwrap()
+                .into()
+        );
+
+        // Adding lower round does not affect latest
+
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/40 | jq
+            round: 40,
+            previous_signature: hex::decode("88756596758c8219b9973a496bf040a0962244c0a309695d92a9853ab03c1f5301ac9c02f8baeac6f84ce1a397f39eed1960be7f85b1c8bc64ac25567030a03673e08440d2a319319d883120a99822d0d6c23bd333725a1c4df269863a30b784").unwrap().into(),
+            signature: hex::decode("8ea1d9cf15546a6b1515803dfaccbb379966b74e553fd9faa22206828e26d4b13a0b4d81f4820256af9bd228e428e2cb13a2bf634af151e815f939005b6393b12c33a7eed68d6c019ea3885f0a18541a23fb5312aab061d7ec9ebc798726a774").unwrap().into(),
+        };
+        handle(&mut deps, mock_env(), mock_info("anyone", &[]), msg).unwrap();
+
+        let latest: LatestResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Latest {}).unwrap()).unwrap();
+        assert_eq!(latest.round, 45);
+        assert_eq!(
+            latest.randomness,
+            hex::decode("bfef28c6f445af5eedcf9de596a0bdd95b7e285aedefd17d70e1fac668c5f05b")
+                .unwrap()
+                .into()
+        );
     }
 }
