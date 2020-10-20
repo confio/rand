@@ -40,7 +40,7 @@ pub fn try_add<S: Storage, A: Api, Q: Querier>(
     signature: Binary,
 ) -> Result<HandleResponse, HandleError> {
     let pubkey = config_read(&deps.storage).load()?.pubkey;
-    let pk = g1_from_variable(&pubkey).unwrap(); // TODO: handle error
+    let pk = g1_from_variable(&pubkey).map_err(|_| HandleError::InvalidPubkey {})?;
     let valid = verify(
         &pk,
         round,
@@ -157,6 +157,32 @@ mod tests {
             hex::decode("8b676484b5fb1f37f9ec5c413d7d29883504e5b669f604a1ce68b3388e9ae3d9")
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn add_fails_when_pubkey_is_invalid() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let mut broken: Vec<u8> = pubkey_leo_mainnet().into();
+        broken.push(0xF9);
+        let msg = InitMsg {
+            pubkey: broken.into(),
+        };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        let info = mock_info("anyone", &[]);
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/72785 | jq
+            round: 72785,
+            previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),
+            signature: hex::decode("82f5d3d2de4db19d40a6980e8aa37842a0e55d1df06bd68bddc8d60002e8e959eb9cfa368b3c1b77d18f02a54fe047b80f0989315f83b12a74fd8679c4f12aae86eaf6ab5690b34f1fddd50ee3cc6f6cdf59e95526d5a5d82aaa84fa6f181e42").unwrap().into(),
+        };
+        let result = handle(&mut deps, mock_env(), info, msg);
+        match result.unwrap_err() {
+            HandleError::InvalidPubkey {} => {}
+            err => panic!("Unexpected error: {:?}", err),
+        }
     }
 
     #[test]

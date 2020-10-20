@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum HandleError {
     #[error("StdError: {0}")]
     StdError(#[from] StdError),
+    #[error("Could not load pubkey into point in G1")]
+    InvalidPubkey {},
     #[error("Signature verification failed")]
     InvalidSignature {},
 }
