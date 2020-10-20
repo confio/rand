@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{coins, from_binary, ContractResult, HandleResponse, InitResponse};
+use cosmwasm_std::{coins, from_binary, Binary, ContractResult, HandleResponse, InitResponse};
 use cosmwasm_vm::testing::{
     handle, init, mock_env, mock_info, mock_instance, mock_instance_with_gas_limit, query,
 };
@@ -27,11 +27,22 @@ use rand::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/rand.wasm");
 // static WASM: &[u8] = include_bytes!("../artifacts/rand.wasm");
 
+fn pubkey_leo_mainnet() -> Binary {
+    vec![
+        134, 143, 0, 94, 184, 230, 228, 202, 10, 71, 200, 167, 124, 234, 165, 48, 154, 71, 151,
+        138, 124, 113, 188, 92, 206, 150, 54, 107, 93, 122, 86, 153, 55, 197, 41, 238, 218, 102,
+        199, 41, 55, 132, 169, 64, 40, 1, 175, 49,
+    ]
+    .into()
+}
+
 #[test]
 fn proper_initialization() {
     let mut deps = mock_instance(WASM, &[]);
 
-    let msg = InitMsg { round: 17 };
+    let msg = InitMsg {
+        pubkey: pubkey_leo_mainnet(),
+    };
     let info = mock_info("creator", &coins(1000, "earth"));
 
     // we can just call .unwrap() to assert this was a success
@@ -48,7 +59,9 @@ fn proper_initialization() {
 fn verify_valid() {
     let mut deps = mock_instance_with_gas_limit(WASM, 1_000_000_000);
 
-    let msg = InitMsg { round: 17 };
+    let msg = InitMsg {
+        pubkey: pubkey_leo_mainnet(),
+    };
     let info = mock_info("creator", &[]);
     let _res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -75,7 +88,9 @@ fn verify_valid() {
 fn verify_invalid() {
     let mut deps = mock_instance_with_gas_limit(WASM, 1_000_000_000);
 
-    let msg = InitMsg { round: 17 };
+    let msg = InitMsg {
+        pubkey: pubkey_leo_mainnet(),
+    };
     let info = mock_info("creator", &[]);
     let _res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();
 

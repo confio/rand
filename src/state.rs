@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Storage;
+use cosmwasm_std::{Binary, Storage};
 use cosmwasm_storage::{
     prefixed, prefixed_read, singleton, singleton_read, PrefixedStorage, ReadonlyPrefixedStorage,
     ReadonlySingleton, Singleton,
@@ -11,15 +11,15 @@ pub static CONFIG_KEY: &[u8] = b"config";
 const BEACONS_KEY: &[u8] = b"beacons";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct State {
-    pub round: u64,
+pub struct Config {
+    pub pubkey: Binary,
 }
 
-pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, State> {
+pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, State> {
+pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 

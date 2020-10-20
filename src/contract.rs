@@ -2,19 +2,11 @@ use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, MessageInfo, Order, Querier,
     ReadonlyStorage, StdResult, Storage,
 };
-use drand_verify::{derive_randomness, g1_from_fixed, verify};
+use drand_verify::{derive_randomness, g1_from_variable, verify};
 
 use crate::errors::{HandleError, QueryError};
 use crate::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
-use crate::state::{beacons_storage, beacons_storage_read, config, State};
-
-// $ node
-// > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
-const PK_LEO_MAINNET: [u8; 48] = [
-    134, 143, 0, 94, 184, 230, 228, 202, 10, 71, 200, 167, 124, 234, 165, 48, 154, 71, 151, 138,
-    124, 113, 188, 92, 206, 150, 54, 107, 93, 122, 86, 153, 55, 197, 41, 238, 218, 102, 199, 41,
-    55, 132, 169, 64, 40, 1, 175, 49,
-];
+use crate::state::{beacons_storage, beacons_storage_read, config, config_read, Config};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -22,10 +14,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     _info: MessageInfo,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    let state = State { round: msg.round };
-
-    config(&mut deps.storage).save(&state)?;
-
+    config(&mut deps.storage).save(&Config { pubkey: msg.pubkey })?;
     Ok(InitResponse::default())
 }
 
@@ -50,7 +39,8 @@ pub fn try_add<S: Storage, A: Api, Q: Querier>(
     previous_signature: Binary,
     signature: Binary,
 ) -> Result<HandleResponse, HandleError> {
-    let pk = g1_from_fixed(PK_LEO_MAINNET).unwrap();
+    let pubkey = config_read(&deps.storage).load()?.pubkey;
+    let pk = g1_from_variable(&pubkey).unwrap(); // TODO: handle error
     let valid = verify(
         &pk,
         round,
@@ -110,12 +100,25 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, ReadonlyStorage};
 
+    // $ node
+    // > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
+    fn pubkey_leo_mainnet() -> Binary {
+        vec![
+            134, 143, 0, 94, 184, 230, 228, 202, 10, 71, 200, 167, 124, 234, 165, 48, 154, 71, 151,
+            138, 124, 113, 188, 92, 206, 150, 54, 107, 93, 122, 86, 153, 55, 197, 41, 238, 218,
+            102, 199, 41, 55, 132, 169, 64, 40, 1, 175, 49,
+        ]
+        .into()
+    }
+
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &coins(1000, "earth"));
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
 
         let res = init(&mut deps, mock_env(), info, msg).unwrap();
         assert_eq!(res.messages.len(), 0);
@@ -126,7 +129,9 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
         let _res = init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
@@ -159,7 +164,9 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
         let _res = init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
@@ -181,7 +188,9 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
         let _res = init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
@@ -203,7 +212,9 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
         let result = query(&mut deps, mock_env(), QueryMsg::Latest {});
@@ -218,7 +229,9 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let msg = InitMsg { round: 17 };
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+        };
         let _res = init(&mut deps, mock_env(), info, msg).unwrap();
 
         // Add first beacon
