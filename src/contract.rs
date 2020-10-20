@@ -132,7 +132,7 @@ mod tests {
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
         };
-        let _res = init(&mut deps, mock_env(), info, msg).unwrap();
+        init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
         let msg = HandleMsg::Add {
@@ -193,7 +193,7 @@ mod tests {
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
         };
-        let _res = init(&mut deps, mock_env(), info, msg).unwrap();
+        init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
         let msg = HandleMsg::Add {
@@ -217,7 +217,7 @@ mod tests {
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
         };
-        let _res = init(&mut deps, mock_env(), info, msg).unwrap();
+        init(&mut deps, mock_env(), info, msg).unwrap();
 
         let info = mock_info("anyone", &[]);
         let msg = HandleMsg::Add {
@@ -258,7 +258,7 @@ mod tests {
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
         };
-        let _res = init(&mut deps, mock_env(), info, msg).unwrap();
+        init(&mut deps, mock_env(), info, msg).unwrap();
 
         // Add first beacon
 
