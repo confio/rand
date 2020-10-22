@@ -47,11 +47,7 @@ pub fn try_set_bounty<S: Storage, A: Api, Q: Querier>(
 ) -> Result<HandleResponse, HandleError> {
     let denom = config_read(&deps.storage).load()?.bounty_denom;
 
-    let matching_coin = info
-        .sent_funds
-        .iter()
-        .filter(|fund| fund.denom == denom)
-        .next();
+    let matching_coin = info.sent_funds.iter().find(|fund| fund.denom == denom);
     let sent_amount: u128 = match matching_coin {
         Some(coin) => coin.amount.into(),
         None => {
@@ -128,7 +124,7 @@ fn query_latest<S: Storage, A: Api, Q: Querier>(
 ) -> Result<LatestResponse, QueryError> {
     let store = beacons_storage_read(&deps.storage);
     let mut iter = store.range(None, None, Order::Descending);
-    let (key, value) = iter.next().ok_or_else(|| QueryError::NoBeacon {})?;
+    let (key, value) = iter.next().ok_or(QueryError::NoBeacon {})?;
 
     Ok(LatestResponse {
         round: u64::from_be_bytes(Binary(key).to_array()?),
@@ -392,7 +388,7 @@ mod tests {
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
-        let result = query(&mut deps, mock_env(), QueryMsg::Latest {});
+        let result = query(&deps, mock_env(), QueryMsg::Latest {});
         match result.unwrap_err() {
             QueryError::NoBeacon {} => {}
             err => panic!("Unexpected error: {:?}", err),
