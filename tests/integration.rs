@@ -37,12 +37,15 @@ fn pubkey_leo_mainnet() -> Binary {
     .into()
 }
 
+const BOUNTY_DENOM: &str = "ucosm";
+
 #[test]
 fn proper_initialization() {
     let mut deps = mock_instance(WASM, &[]);
 
     let msg = InitMsg {
         pubkey: pubkey_leo_mainnet(),
+        bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &coins(1000, "earth"));
 
@@ -62,6 +65,7 @@ fn verify_valid() {
 
     let msg = InitMsg {
         pubkey: pubkey_leo_mainnet(),
+        bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &[]);
     let _res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();
@@ -92,6 +96,7 @@ fn verify_invalid() {
 
     let msg = InitMsg {
         pubkey: pubkey_leo_mainnet(),
+        bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &[]);
     let _res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();

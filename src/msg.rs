@@ -5,11 +5,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub pubkey: Binary,
+    /// The denom in which bounties are paid. This is typically the fee token of the chain.
+    pub bounty_denom: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    /// Sets a bounty as sent in sent_funds on the given round.
+    SetBounty { round: u64 },
     Add {
         round: u64,
         previous_signature: Binary,

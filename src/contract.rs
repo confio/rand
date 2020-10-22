@@ -1,12 +1,15 @@
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, MessageInfo, Order, Querier,
-    ReadonlyStorage, StdResult, Storage,
+    coins, to_binary, Api, BankMsg, Binary, CosmosMsg, Env, Extern, HandleResponse, InitResponse,
+    MessageInfo, Order, Querier, ReadonlyStorage, StdResult, Storage,
 };
 use drand_verify::{derive_randomness, g1_from_variable, verify};
 
 use crate::errors::{HandleError, QueryError};
 use crate::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
-use crate::state::{beacons_storage, beacons_storage_read, config, config_read, Config};
+use crate::state::{
+    beacons_storage, beacons_storage_read, bounties_storage, bounties_storage_read, config,
+    config_read, Config,
+};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -14,32 +17,72 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     _info: MessageInfo,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    config(&mut deps.storage).save(&Config { pubkey: msg.pubkey })?;
+    config(&mut deps.storage).save(&Config {
+        pubkey: msg.pubkey,
+        bounty_denom: msg.bounty_denom,
+    })?;
     Ok(InitResponse::default())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _info: MessageInfo,
+    env: Env,
+    info: MessageInfo,
     msg: HandleMsg,
 ) -> Result<HandleResponse, HandleError> {
     match msg {
+        HandleMsg::SetBounty { round } => try_set_bounty(deps, info, round),
         HandleMsg::Add {
             round,
             previous_signature,
             signature,
-        } => try_add(deps, round, previous_signature, signature),
+        } => try_add(deps, env, info, round, previous_signature, signature),
     }
+}
+
+pub fn try_set_bounty<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    info: MessageInfo,
+    round: u64,
+) -> Result<HandleResponse, HandleError> {
+    let denom = config_read(&deps.storage).load()?.bounty_denom;
+
+    let matching_coin = info
+        .sent_funds
+        .iter()
+        .filter(|fund| fund.denom == denom)
+        .next();
+    let sent_amount: u128 = match matching_coin {
+        Some(coin) => coin.amount.into(),
+        None => {
+            return Err(HandleError::NoFundsSent {
+                expected_denom: denom,
+            });
+        }
+    };
+
+    let current = get_bounty(&deps.storage, round);
+    let new_value = current + sent_amount;
+    set_bounty(&mut deps.storage, round, new_value);
+
+    let mut response = HandleResponse::default();
+    response.data = Some(new_value.to_be_bytes().into());
+    Ok(response)
 }
 
 pub fn try_add<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
+    env: Env,
+    info: MessageInfo,
     round: u64,
     previous_signature: Binary,
     signature: Binary,
 ) -> Result<HandleResponse, HandleError> {
-    let pubkey = config_read(&deps.storage).load()?.pubkey;
+    let Config {
+        pubkey,
+        bounty_denom,
+        ..
+    } = config_read(&deps.storage).load()?;
     let pk = g1_from_variable(&pubkey).map_err(|_| HandleError::InvalidPubkey {})?;
     let valid = verify(
         &pk,
@@ -58,6 +101,14 @@ pub fn try_add<S: Storage, A: Api, Q: Querier>(
 
     let mut response = HandleResponse::default();
     response.data = Some(randomness.into());
+    let bounty = get_bounty(&deps.storage, round);
+    if bounty != 0 {
+        response.messages = vec![CosmosMsg::Bank(BankMsg::Send {
+            from_address: env.contract.address,
+            to_address: info.sender,
+            amount: coins(bounty, bounty_denom),
+        })]
+    }
     Ok(response)
 }
 
@@ -85,6 +136,21 @@ fn query_latest<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+fn get_bounty<S: Storage>(storage: &S, round: u64) -> u128 {
+    let key = round.to_be_bytes();
+    let bounties = bounties_storage_read(storage);
+    match bounties.get(&key) {
+        Some(data) => u128::from_be_bytes(copy_to_array(&data)),
+        None => 0u128,
+    }
+}
+
+fn set_bounty<S: Storage>(storage: &mut S, round: u64, amount: u128) {
+    let key = round.to_be_bytes();
+    let mut bounties = bounties_storage(storage);
+    bounties.set(&key, &amount.to_be_bytes());
+}
+
 fn copy_to_array<A>(slice: &[u8]) -> A
 where
     A: Sized + Default + AsMut<[u8]>,
@@ -97,8 +163,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, ReadonlyStorage};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{from_binary, Coin, HumanAddr, ReadonlyStorage, Uint128};
 
     // $ node
     // > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
@@ -111,6 +177,8 @@ mod tests {
         .into()
     }
 
+    const BOUNTY_DENOM: &str = "ucosm";
+
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies(&[]);
@@ -118,10 +186,49 @@ mod tests {
         let info = mock_info("creator", &coins(1000, "earth"));
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
 
         let res = init(&mut deps, mock_env(), info, msg).unwrap();
         assert_eq!(res.messages.len(), 0);
+    }
+
+    #[test]
+    fn set_bounty_works() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
+        };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        // First bounty
+
+        let msg = HandleMsg::SetBounty { round: 7000 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(5000),
+            }],
+        );
+        let response = handle(&mut deps, mock_env(), info, msg).unwrap();
+        assert_eq!(response.data.unwrap(), 5000u128.to_be_bytes().into());
+
+        // Increase bounty
+
+        let msg = HandleMsg::SetBounty { round: 7000 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(24),
+            }],
+        );
+        let response = handle(&mut deps, mock_env(), info, msg).unwrap();
+        assert_eq!(response.data.unwrap(), 5024u128.to_be_bytes().into());
     }
 
     #[test]
@@ -131,6 +238,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -168,6 +276,7 @@ mod tests {
         broken.push(0xF9);
         let msg = InitMsg {
             pubkey: broken.into(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -192,6 +301,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -216,6 +326,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -234,12 +345,58 @@ mod tests {
     }
 
     #[test]
+    fn add_receives_bountry() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
+        };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        // Set bounty
+
+        let msg = HandleMsg::SetBounty { round: 72785 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(4500),
+            }],
+        );
+        let response = handle(&mut deps, mock_env(), info, msg).unwrap();
+        assert_eq!(response.data.unwrap(), 4500u128.to_be_bytes().into());
+
+        // Claim bounty
+
+        let info = mock_info("claimer", &[]);
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/72785
+            round: 72785,
+            previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),
+            signature: hex::decode("82f5d3d2de4db19d40a6980e8aa37842a0e55d1df06bd68bddc8d60002e8e959eb9cfa368b3c1b77d18f02a54fe047b80f0989315f83b12a74fd8679c4f12aae86eaf6ab5690b34f1fddd50ee3cc6f6cdf59e95526d5a5d82aaa84fa6f181e42").unwrap().into(),
+        };
+        let response = handle(&mut deps, mock_env(), info, msg).unwrap();
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            CosmosMsg::Bank(BankMsg::Send {
+                from_address: HumanAddr::from(MOCK_CONTRACT_ADDR),
+                to_address: HumanAddr::from("claimer"),
+                amount: coins(4500, BOUNTY_DENOM),
+            })
+        );
+    }
+
+    #[test]
     fn query_latest_fails_when_no_beacon_exists() {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 
@@ -257,6 +414,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
             pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
 

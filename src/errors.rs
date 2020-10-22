@@ -9,6 +9,8 @@ pub enum HandleError {
     InvalidPubkey {},
     #[error("Signature verification failed")]
     InvalidSignature {},
+    #[error("No funds were sent with the expected token: {expected_denom}")]
+    NoFundsSent { expected_denom: String },
 }
 
 #[derive(Error, Debug)]

@@ -1,3 +1,11 @@
+## Development build
+
+Some fast checks
+
+```sh
+cargo fmt && cargo unit-test && cargo check --tests && cargo schema && cargo clippy -- -D warnings
+```
+
 ## Production build
 
 ```

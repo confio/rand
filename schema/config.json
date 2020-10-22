@@ -3,9 +3,13 @@
   "title": "Config",
   "type": "object",
   "required": [
+    "bounty_denom",
     "pubkey"
   ],
   "properties": {
+    "bounty_denom": {
+      "type": "string"
+    },
     "pubkey": {
       "$ref": "#/definitions/Binary"
     }

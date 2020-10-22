@@ -3,6 +3,28 @@
   "title": "HandleMsg",
   "anyOf": [
     {
+      "description": "Sets a bounty as sent in sent_funds on the given round.",
+      "type": "object",
+      "required": [
+        "set_bounty"
+      ],
+      "properties": {
+        "set_bounty": {
+          "type": "object",
+          "required": [
+            "round"
+          ],
+          "properties": {
+            "round": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
       "type": "object",
       "required": [
         "add"

@@ -3,9 +3,14 @@
   "title": "InitMsg",
   "type": "object",
   "required": [
+    "bounty_denom",
     "pubkey"
   ],
   "properties": {
+    "bounty_denom": {
+      "description": "The denom in which bounties are paid. This is typically the fee token of the chain.",
+      "type": "string"
+    },
     "pubkey": {
       "$ref": "#/definitions/Binary"
     }
