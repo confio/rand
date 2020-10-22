@@ -24,10 +24,16 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    Get { round: u64 },
     Latest {},
 }
 
-// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct GetResponse {
+    /// The randomness if available. When the beacon does not exist, this is an empty value.
+    pub randomness: Binary,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct LatestResponse {
     pub round: u64,

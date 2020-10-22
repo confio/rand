@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use drand_verify::{derive_randomness, g1_from_variable, verify};
 
 use crate::errors::{HandleError, QueryError};
-use crate::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
+use crate::msg::{GetResponse, HandleMsg, InitMsg, LatestResponse, QueryMsg};
 use crate::state::{
     beacons_storage, beacons_storage_read, bounties_storage, bounties_storage_read, config,
     config_read, Config,
@@ -115,9 +115,21 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> Result<Binary, QueryError> {
     let response = match msg {
+        QueryMsg::Get { round } => to_binary(&query_get(deps, round)?)?,
         QueryMsg::Latest {} => to_binary(&query_latest(deps)?)?,
     };
     Ok(response)
+}
+
+fn query_get<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    round: u64,
+) -> Result<GetResponse, QueryError> {
+    let beacons = beacons_storage_read(&deps.storage);
+    let randomness = beacons.get(&round.to_be_bytes()).unwrap_or_default();
+    Ok(GetResponse {
+        randomness: randomness.into(),
+    })
 }
 
 fn query_latest<S: Storage, A: Api, Q: Querier>(
@@ -395,6 +407,43 @@ mod tests {
         };
         let response = handle(&mut deps, mock_env(), info, msg).unwrap();
         assert_eq!(response.messages.len(), 0);
+    }
+
+    #[test]
+    fn query_get_works() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg {
+            pubkey: pubkey_leo_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
+        };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        // Beacon does not exist
+
+        let response: GetResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Get { round: 42 }).unwrap()).unwrap();
+        assert_eq!(response.randomness, Binary::default());
+
+        // Beacon exists
+
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/42 | jq
+            round: 42,
+            previous_signature: hex::decode("a418fccbfaa0c84aba8cbcd4e3c0555170eb2382dfed108ecfc6df249ad43efe00078bdcb5060fe2deed4731ca5b4c740069aaf77927ba59c5870ab3020352aca3853adfdb9162d40ec64f71b121285898e28cdf237e982ac5c4deb287b0d57b").unwrap().into(),
+            signature: hex::decode("9469186f38e5acdac451940b1b22f737eb0de060b213f0326166c7882f2f82b92ce119bdabe385941ef46f72736a4b4d02ce206e1eb46cac53019caf870080fede024edcd1bd0225eb1335b83002ae1743393e83180e47d9948ab8ba7568dd99").unwrap().into(),
+        };
+        handle(&mut deps, mock_env(), mock_info("anyone", &[]), msg).unwrap();
+
+        let response: GetResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Get { round: 42 }).unwrap()).unwrap();
+        assert_eq!(
+            response.randomness,
+            hex::decode("a9f12c5869d05e084d1741957130e1d0bf78a8ca9a8deb97c47cac29aae433c6")
+                .unwrap()
+                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
+        );
     }
 
     #[test]
