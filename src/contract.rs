@@ -222,7 +222,7 @@ mod tests {
             }],
         );
         let response = handle(&mut deps, mock_env(), info, msg).unwrap();
-        assert_eq!(response.data.unwrap(), 5000u128.to_be_bytes().into());
+        assert_eq!(response.data.unwrap(), Binary::from(5000u128.to_be_bytes()));
 
         // Increase bounty
 
@@ -235,7 +235,7 @@ mod tests {
             }],
         );
         let response = handle(&mut deps, mock_env(), info, msg).unwrap();
-        assert_eq!(response.data.unwrap(), 5024u128.to_be_bytes().into());
+        assert_eq!(response.data.unwrap(), Binary::from(5024u128.to_be_bytes()));
     }
 
     #[test]
@@ -261,7 +261,6 @@ mod tests {
             res.data.unwrap(),
             hex::decode("8b676484b5fb1f37f9ec5c413d7d29883504e5b669f604a1ce68b3388e9ae3d9")
                 .unwrap()
-                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
         );
 
         let value = deps
@@ -374,7 +373,7 @@ mod tests {
             }],
         );
         let response = handle(&mut deps, mock_env(), info, msg).unwrap();
-        assert_eq!(response.data.unwrap(), 4500u128.to_be_bytes().into());
+        assert_eq!(response.data.unwrap(), Binary::from(4500u128.to_be_bytes()));
 
         // Claim bounty
 
@@ -442,7 +441,6 @@ mod tests {
             response.randomness,
             hex::decode("a9f12c5869d05e084d1741957130e1d0bf78a8ca9a8deb97c47cac29aae433c6")
                 .unwrap()
-                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
         );
     }
 
@@ -492,7 +490,6 @@ mod tests {
             latest.randomness,
             hex::decode("a9f12c5869d05e084d1741957130e1d0bf78a8ca9a8deb97c47cac29aae433c6")
                 .unwrap()
-                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
         );
 
         // Adding higher round updated the latest value
@@ -512,7 +509,6 @@ mod tests {
             latest.randomness,
             hex::decode("bfef28c6f445af5eedcf9de596a0bdd95b7e285aedefd17d70e1fac668c5f05b")
                 .unwrap()
-                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
         );
 
         // Adding lower round does not affect latest
@@ -532,7 +528,6 @@ mod tests {
             latest.randomness,
             hex::decode("bfef28c6f445af5eedcf9de596a0bdd95b7e285aedefd17d70e1fac668c5f05b")
                 .unwrap()
-                .into() // TODO: remove into() https://github.com/CosmWasm/cosmwasm/issues/591
         );
     }
 }
