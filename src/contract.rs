@@ -61,7 +61,7 @@ pub fn try_set_bounty<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let current = get_bounty(&deps.storage, round);
+    let current = get_bounty(&deps.storage, round)?;
     let new_value = current + sent_amount;
     set_bounty(&mut deps.storage, round, new_value);
 
@@ -101,7 +101,7 @@ pub fn try_add<S: Storage, A: Api, Q: Querier>(
 
     let mut response = HandleResponse::default();
     response.data = Some(randomness.into());
-    let bounty = get_bounty(&deps.storage, round);
+    let bounty = get_bounty(&deps.storage, round)?;
     if bounty != 0 {
         response.messages = vec![CosmosMsg::Bank(BankMsg::Send {
             from_address: env.contract.address,
@@ -131,33 +131,25 @@ fn query_latest<S: Storage, A: Api, Q: Querier>(
     let (key, value) = iter.next().ok_or_else(|| QueryError::NoBeacon {})?;
 
     Ok(LatestResponse {
-        round: u64::from_be_bytes(copy_to_array(&key)),
+        round: u64::from_be_bytes(Binary(key).to_array()?),
         randomness: value.into(),
     })
 }
 
-fn get_bounty<S: Storage>(storage: &S, round: u64) -> u128 {
+fn get_bounty<S: Storage>(storage: &S, round: u64) -> StdResult<u128> {
     let key = round.to_be_bytes();
     let bounties = bounties_storage_read(storage);
-    match bounties.get(&key) {
-        Some(data) => u128::from_be_bytes(copy_to_array(&data)),
+    let value = match bounties.get(&key) {
+        Some(data) => u128::from_be_bytes(Binary(data).to_array()?),
         None => 0u128,
-    }
+    };
+    Ok(value)
 }
 
 fn set_bounty<S: Storage>(storage: &mut S, round: u64, amount: u128) {
     let key = round.to_be_bytes();
     let mut bounties = bounties_storage(storage);
     bounties.set(&key, &amount.to_be_bytes());
-}
-
-fn copy_to_array<A>(slice: &[u8]) -> A
-where
-    A: Sized + Default + AsMut<[u8]>,
-{
-    let mut a = Default::default();
-    <A as AsMut<[u8]>>::as_mut(&mut a).copy_from_slice(slice);
-    a
 }
 
 #[cfg(test)]
