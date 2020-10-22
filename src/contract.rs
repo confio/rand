@@ -103,7 +103,8 @@ pub fn try_add<S: Storage, A: Api, Q: Querier>(
             from_address: env.contract.address,
             to_address: info.sender,
             amount: coins(bounty, bounty_denom),
-        })]
+        })];
+        clear_bounty(&mut deps.storage, round);
     }
     Ok(response)
 }
@@ -146,6 +147,12 @@ fn set_bounty<S: Storage>(storage: &mut S, round: u64, amount: u128) {
     let key = round.to_be_bytes();
     let mut bounties = bounties_storage(storage);
     bounties.set(&key, &amount.to_be_bytes());
+}
+
+fn clear_bounty<S: Storage>(storage: &mut S, round: u64) {
+    let key = round.to_be_bytes();
+    let mut bounties = bounties_storage(storage);
+    bounties.remove(&key);
 }
 
 #[cfg(test)]
@@ -375,6 +382,18 @@ mod tests {
                 amount: coins(4500, BOUNTY_DENOM),
             })
         );
+
+        // Cannot be claimed again
+
+        let info = mock_info("claimer2", &[]);
+        let msg = HandleMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/72785
+            round: 72785,
+            previous_signature: hex::decode("a609e19a03c2fcc559e8dae14900aaefe517cb55c840f6e69bc8e4f66c8d18e8a609685d9917efbfb0c37f058c2de88f13d297c7e19e0ab24813079efe57a182554ff054c7638153f9b26a60e7111f71a0ff63d9571704905d3ca6df0b031747").unwrap().into(),
+            signature: hex::decode("82f5d3d2de4db19d40a6980e8aa37842a0e55d1df06bd68bddc8d60002e8e959eb9cfa368b3c1b77d18f02a54fe047b80f0989315f83b12a74fd8679c4f12aae86eaf6ab5690b34f1fddd50ee3cc6f6cdf59e95526d5a5d82aaa84fa6f181e42").unwrap().into(),
+        };
+        let response = handle(&mut deps, mock_env(), info, msg).unwrap();
+        assert_eq!(response.messages.len(), 0);
     }
 
     #[test]
