@@ -175,7 +175,7 @@ mod tests {
 
     // $ node
     // > Uint8Array.from(Buffer.from("868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31", "hex"))
-    fn pubkey_leo_mainnet() -> Binary {
+    fn pubkey_loe_mainnet() -> Binary {
         vec![
             134, 143, 0, 94, 184, 230, 228, 202, 10, 71, 200, 167, 124, 234, 165, 48, 154, 71, 151,
             138, 124, 113, 188, 92, 206, 150, 54, 107, 93, 122, 86, 153, 55, 197, 41, 238, 218,
@@ -192,7 +192,7 @@ mod tests {
 
         let info = mock_info("creator", &coins(1000, "earth"));
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
 
@@ -206,7 +206,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -244,7 +244,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -279,7 +279,7 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let info = mock_info("creator", &[]);
-        let mut broken: Vec<u8> = pubkey_leo_mainnet().into();
+        let mut broken: Vec<u8> = pubkey_loe_mainnet().into();
         broken.push(0xF9);
         let msg = InitMsg {
             pubkey: broken.into(),
@@ -307,7 +307,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -332,7 +332,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -357,7 +357,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -414,7 +414,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -450,7 +450,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();
@@ -468,7 +468,7 @@ mod tests {
 
         let info = mock_info("creator", &[]);
         let msg = InitMsg {
-            pubkey: pubkey_leo_mainnet(),
+            pubkey: pubkey_loe_mainnet(),
             bounty_denom: BOUNTY_DENOM.into(),
         };
         init(&mut deps, mock_env(), info, msg).unwrap();

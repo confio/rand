@@ -28,7 +28,7 @@ use rand::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/rand.wasm");
 // static WASM: &[u8] = include_bytes!("../artifacts/rand.wasm");
 
-fn pubkey_leo_mainnet() -> Binary {
+fn pubkey_loe_mainnet() -> Binary {
     vec![
         134, 143, 0, 94, 184, 230, 228, 202, 10, 71, 200, 167, 124, 234, 165, 48, 154, 71, 151,
         138, 124, 113, 188, 92, 206, 150, 54, 107, 93, 122, 86, 153, 55, 197, 41, 238, 218, 102,
@@ -44,7 +44,7 @@ fn proper_initialization() {
     let mut deps = mock_instance(WASM, &[]);
 
     let msg = InitMsg {
-        pubkey: pubkey_leo_mainnet(),
+        pubkey: pubkey_loe_mainnet(),
         bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &coins(1000, "earth"));
@@ -64,7 +64,7 @@ fn verify_valid() {
     let mut deps = mock_instance_with_gas_limit(WASM, 1_000_000_000);
 
     let msg = InitMsg {
-        pubkey: pubkey_leo_mainnet(),
+        pubkey: pubkey_loe_mainnet(),
         bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &[]);
@@ -95,7 +95,7 @@ fn verify_invalid() {
     let mut deps = mock_instance_with_gas_limit(WASM, 1_000_000_000);
 
     let msg = InitMsg {
-        pubkey: pubkey_leo_mainnet(),
+        pubkey: pubkey_loe_mainnet(),
         bounty_denom: BOUNTY_DENOM.into(),
     };
     let info = mock_info("creator", &[]);
