@@ -33,6 +33,17 @@
           "type": "object"
         }
       }
+    },
+    {
+      "type": "object",
+      "required": [
+        "bounties"
+      ],
+      "properties": {
+        "bounties": {
+          "type": "object"
+        }
+      }
     }
   ]
 }

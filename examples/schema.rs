@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use rand::msg::{HandleMsg, InitMsg, LatestResponse, QueryMsg};
+use rand::msg::{BountiesResponse, GetResponse, HandleMsg, InitMsg, LatestResponse, QueryMsg};
 use rand::state::Config;
 
 fn main() {
@@ -16,6 +16,9 @@ fn main() {
     export_schema(&schema_for!(InitMsg), &out_dir);
     export_schema(&schema_for!(HandleMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
+    // Query responses
+    export_schema(&schema_for!(BountiesResponse), &out_dir);
+    export_schema(&schema_for!(GetResponse), &out_dir);
     export_schema(&schema_for!(LatestResponse), &out_dir);
     // state
     export_schema(&schema_for!(Config), &out_dir);

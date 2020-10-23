@@ -1,4 +1,4 @@
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +26,7 @@ pub enum HandleMsg {
 pub enum QueryMsg {
     Get { round: u64 },
     Latest {},
+    Bounties {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,4 +39,15 @@ pub struct GetResponse {
 pub struct LatestResponse {
     pub round: u64,
     pub randomness: Binary,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Bounty {
+    pub round: u64,
+    pub amount: Vec<Coin>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct BountiesResponse {
+    pub bounties: Vec<Bounty>,
 }

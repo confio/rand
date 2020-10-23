@@ -5,7 +5,9 @@ use cosmwasm_std::{
 use drand_verify::{derive_randomness, g1_from_variable, verify};
 
 use crate::errors::{HandleError, QueryError};
-use crate::msg::{GetResponse, HandleMsg, InitMsg, LatestResponse, QueryMsg};
+use crate::msg::{
+    BountiesResponse, Bounty, GetResponse, HandleMsg, InitMsg, LatestResponse, QueryMsg,
+};
 use crate::state::{
     beacons_storage, beacons_storage_read, bounties_storage, bounties_storage_read, config,
     config_read, Config,
@@ -117,6 +119,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     let response = match msg {
         QueryMsg::Get { round } => to_binary(&query_get(deps, round)?)?,
         QueryMsg::Latest {} => to_binary(&query_latest(deps)?)?,
+        QueryMsg::Bounties {} => to_binary(&query_bounties(deps)?)?,
     };
     Ok(response)
 }
@@ -142,6 +145,30 @@ fn query_latest<S: Storage, A: Api, Q: Querier>(
     Ok(LatestResponse {
         round: u64::from_be_bytes(Binary(key).to_array()?),
         randomness: value.into(),
+    })
+}
+
+fn query_bounties<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> Result<BountiesResponse, QueryError> {
+    let Config { bounty_denom, .. } = config_read(&deps.storage).load()?;
+
+    let store = bounties_storage_read(&deps.storage);
+    let iter = store.range(None, None, Order::Ascending);
+
+    let bounties: Result<Vec<Bounty>, _> = iter
+        .map(|(key, value)| -> StdResult<Bounty> {
+            let round = u64::from_be_bytes(Binary(key).to_array()?);
+            let amount = coins(
+                u128::from_be_bytes(Binary(value).to_array()?),
+                &bounty_denom,
+            );
+            Ok(Bounty { round, amount })
+        })
+        .collect();
+
+    Ok(BountiesResponse {
+        bounties: bounties?,
     })
 }
 
@@ -528,6 +555,112 @@ mod tests {
             latest.randomness,
             hex::decode("bfef28c6f445af5eedcf9de596a0bdd95b7e285aedefd17d70e1fac668c5f05b")
                 .unwrap()
+        );
+    }
+
+    #[test]
+    fn query_bounties_works() {
+        let mut deps = mock_dependencies(&[]);
+
+        let info = mock_info("creator", &[]);
+        let msg = InitMsg {
+            pubkey: pubkey_loe_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
+        };
+        init(&mut deps, mock_env(), info, msg).unwrap();
+
+        // It starts with an empty list
+
+        let response: BountiesResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Bounties {}).unwrap()).unwrap();
+        assert_eq!(response, BountiesResponse { bounties: vec![] });
+
+        // Set first bounty and query again
+
+        let msg = HandleMsg::SetBounty { round: 72785 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(4500),
+            }],
+        );
+        handle(&mut deps, mock_env(), info, msg).unwrap();
+
+        let response: BountiesResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Bounties {}).unwrap()).unwrap();
+        assert_eq!(
+            response,
+            BountiesResponse {
+                bounties: vec![Bounty {
+                    round: 72785,
+                    amount: coins(4500, BOUNTY_DENOM),
+                }]
+            }
+        );
+
+        // Set second bounty and query again
+
+        let msg = HandleMsg::SetBounty { round: 72786 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(321),
+            }],
+        );
+        handle(&mut deps, mock_env(), info, msg).unwrap();
+
+        let response: BountiesResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Bounties {}).unwrap()).unwrap();
+        assert_eq!(
+            response,
+            BountiesResponse {
+                bounties: vec![
+                    Bounty {
+                        round: 72785,
+                        amount: coins(4500, BOUNTY_DENOM),
+                    },
+                    Bounty {
+                        round: 72786,
+                        amount: coins(321, BOUNTY_DENOM),
+                    },
+                ]
+            }
+        );
+
+        // Set third bounty and query again
+
+        let msg = HandleMsg::SetBounty { round: 72784 };
+        let info = mock_info(
+            "anyone",
+            &[Coin {
+                denom: BOUNTY_DENOM.into(),
+                amount: Uint128(55),
+            }],
+        );
+        handle(&mut deps, mock_env(), info, msg).unwrap();
+
+        let response: BountiesResponse =
+            from_binary(&query(&deps, mock_env(), QueryMsg::Bounties {}).unwrap()).unwrap();
+        assert_eq!(
+            response,
+            BountiesResponse {
+                bounties: vec![
+                    Bounty {
+                        round: 72784,
+                        amount: coins(55, BOUNTY_DENOM),
+                    },
+                    Bounty {
+                        round: 72785,
+                        amount: coins(4500, BOUNTY_DENOM),
+                    },
+                    Bounty {
+                        round: 72786,
+                        amount: coins(321, BOUNTY_DENOM),
+                    },
+                ]
+            }
         );
     }
 }
