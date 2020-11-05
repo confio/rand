@@ -52,11 +52,6 @@ fn proper_initialization() {
     // we can just call .unwrap() to assert this was a success
     let res: InitResponse = init(&mut deps, mock_env(), info, msg).unwrap();
     assert_eq!(res.messages.len(), 0);
-
-    // it worked, let's query the state
-    let res = query(&mut deps, mock_env(), QueryMsg::Latest {}).unwrap();
-    let value: LatestResponse = from_binary(&res).unwrap();
-    assert_eq!(value.round, 17);
 }
 
 #[test]
@@ -88,6 +83,15 @@ fn verify_valid() {
     let gas_used = gas_before - deps.get_gas_left();
     println!("Gas used: {}", gas_used);
     println!("Time elapsed: {:.2?}", time_before.elapsed());
+
+    // And it can be found
+    let res = query(&mut deps, mock_env(), QueryMsg::Latest {}).unwrap();
+    let value: LatestResponse = from_binary(&res).unwrap();
+    assert_eq!(value.round, 72785);
+    assert_eq!(
+        value.randomness,
+        hex::decode("8b676484b5fb1f37f9ec5c413d7d29883504e5b669f604a1ce68b3388e9ae3d9").unwrap()
+    );
 }
 
 #[test]
