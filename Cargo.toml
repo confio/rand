@@ -1,7 +1,8 @@
 [package]
 name = "rand"
 version = "0.1.0"
-authors = ["Simon Warta <simon@warta.it>"]
+license = "AGPL-3.0"
+authors = ["Simon Warta <simon@confio.tech>"]
 edition = "2018"
 
 exclude = [
