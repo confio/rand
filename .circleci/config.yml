@@ -26,8 +26,8 @@ jobs:
           name: Integration tests
           command: cargo integration-test --locked
       - run:
-          name: Format source code
-          command: cargo fmt
+          name: Check formatting
+          command: cargo fmt -- --check
       - run:
           name: Build and run schema generator
           command: cargo schema --locked
