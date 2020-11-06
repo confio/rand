@@ -1,3 +1,7 @@
+# Rand – A drand client as a CosmWasm smart contract
+
+To learn more about this project, see this article: https://medium.com/confio/when-your-blockchain-needs-to-roll-the-dice-ed9da121f590
+
 ## Development build
 
 Some fast checks
