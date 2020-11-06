@@ -91,7 +91,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "constant_time_eq",
- "crypto-mac",
+ "crypto-mac 0.8.0",
  "digest 0.9.0",
 ]
 
@@ -312,6 +312,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto-mac"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4857fd85a0c34b3c3297875b747c1e02e06b6a0ea32dd892d8192b9ce0813ea6"
+dependencies = [
+ "generic-array 0.14.4",
+ "subtle",
+]
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -338,8 +348,11 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "drand-verify"
 version = "0.1.0"
-source = "git+https://github.com/CosmWasm/drand-verify?rev=fabe84cf81b22c378f4faa4c60d8380c70c61cc7#fabe84cf81b22c378f4faa4c60d8380c70c61cc7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "171f5f28de35428160401de28a16ad3a4424757776a7f41975a767b6d54c360f"
 dependencies = [
+ "fff",
+ "groupy",
  "paired",
  "sha2",
 ]
@@ -513,9 +526,9 @@ checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
 name = "hkdf"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe1149865383e4526a43aee8495f9a325f0b806c63ce6427d06336a590abbbc9"
+checksum = "51ab2f639c231793c5f6114bdb9bbe50a7dbbfcd7c7c6bd8475dec2d991e964f"
 dependencies = [
  "digest 0.9.0",
  "hmac",
@@ -523,11 +536,11 @@ dependencies = [
 
 [[package]]
 name = "hmac"
-version = "0.8.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "126888268dcc288495a26bf004b38c5fdbb31682f992c84ceb046a1f0fe38840"
+checksum = "c1441c6b1e930e2817404b5046f1f989899143a12bf92de603b69f4e0aee1e15"
 dependencies = [
- "crypto-mac",
+ "crypto-mac 0.10.0",
  "digest 0.9.0",
 ]
 
@@ -698,8 +711,9 @@ dependencies = [
 
 [[package]]
 name = "paired"
-version = "0.20.1"
-source = "git+https://github.com/webmaster128/paired?branch=add-missing-symbols#0f470d3fc627a12e343f8df1631c46df7cf0de84"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42fc2daf8d5a8e22a9833f798e72c0d6862b5f0288f0a2d289b37cd03fa5e283"
 dependencies = [
  "blake2b_simd",
  "byteorder",
