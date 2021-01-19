@@ -22,7 +22,7 @@ In order to measure gas consumption, singlepass tests need to be used. E.g.
 
 ```sh
 cargo wasm
-cargo +nightly integration-test --no-default-features --features singlepass verify_valid -- --nocapture
+cargo integration-test --no-default-features verify_valid -- --nocapture
 ```
 
 ## Production build
