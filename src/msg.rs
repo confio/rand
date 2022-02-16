@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     pub pubkey: Binary,
     /// The denom in which bounties are paid. This is typically the fee token of the chain.
     pub bounty_denom: String,
@@ -11,7 +11,7 @@ pub struct InitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     /// Sets a bounty as sent in sent_funds on the given round.
     SetBounty { round: u64 },
     Add {
@@ -24,9 +24,16 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    Config {},
     Get { round: u64 },
     Latest {},
     Bounties {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ConfigResponse {
+    pub pubkey: Binary,
+    pub bounty_denom: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
