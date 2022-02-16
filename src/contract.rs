@@ -125,7 +125,7 @@ pub fn try_add(
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let response = match msg {
-        QueryMsg::Config {} => to_binary(&query_conig(deps)?)?,
+        QueryMsg::Config {} => to_binary(&query_config(deps)?)?,
         QueryMsg::Get { round } => to_binary(&query_get(deps, round)?)?,
         QueryMsg::Latest {} => to_binary(&query_latest(deps)?)?,
         QueryMsg::Bounties {} => to_binary(&query_bounties(deps)?)?,
@@ -133,7 +133,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     Ok(response)
 }
 
-fn query_conig(deps: Deps) -> Result<ConfigResponse, ContractError> {
+fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = config_read(deps.storage).load()?;
     Ok(ConfigResponse {
         pubkey: config.pubkey,
