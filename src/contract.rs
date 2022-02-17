@@ -123,6 +123,7 @@ pub fn try_add(
         .add_submessages(messages))
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let response = match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?)?,
