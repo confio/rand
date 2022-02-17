@@ -43,4 +43,5 @@ thiserror = "1.0"
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta" }
+cosmwasm-vm = { version = "1.0.0-beta" }
 hex = "0.4"
