@@ -1,4 +1,3 @@
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
@@ -21,7 +20,7 @@ use cw2::set_contract_version;
 const CONTRACT_NAME: &str = "crates.io:rand";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -36,7 +35,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -103,7 +102,7 @@ pub fn try_add(
         return Err(ContractError::InvalidSignature {});
     }
 
-    let randomness: [u8; 32] = derive_randomness(&signature);
+    let randomness = derive_randomness(&signature);
     beacons_storage(deps.storage).set(&round.to_be_bytes(), &randomness);
 
     let bounty = get_bounty(deps.storage, round)?;
@@ -119,11 +118,11 @@ pub fn try_add(
     }
 
     Ok(Response::new()
-        .add_attribute("randomness", to_binary(&randomness).unwrap().to_base64())
+        .add_attribute("randomness", Binary::from(randomness).to_base64())
         .add_submessages(messages))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let response = match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?)?,

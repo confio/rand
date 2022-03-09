@@ -82,8 +82,7 @@ fn verify_invalid() {
     let info = mock_info("creator", &[]);
     let _res: Response = instantiate(&mut deps, mock_env(), info, msg).unwrap();
 
-    // let gas_before = deps.get_gas_left();
-
+    let gas_before = deps.get_gas_left();
     let info = mock_info("anyone", &[]);
     let msg = ExecuteMsg::Add {
         // curl -sS https://drand.cloudflare.com/public/72785
@@ -94,5 +93,8 @@ fn verify_invalid() {
 
     let res: ContractResult<Response> = execute(&mut deps, mock_env(), info, msg);
     let err = res.unwrap_err();
+
     assert_eq!(err, "Signature verification failed");
+    let gas_used = gas_before - deps.get_gas_left();
+    println!("Gas used: {}", gas_used);
 }
