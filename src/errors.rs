@@ -13,4 +13,8 @@ pub enum ContractError {
     NoFundsSent { expected_denom: String },
     #[error("No beacon exists in the database")]
     NoBeacon {},
+    #[error("Beacon does not exist for this round")]
+    BeaconNotFound {},
+    #[error("Range is not valid")]
+    InvalidRange {},
 }

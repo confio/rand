@@ -4,6 +4,7 @@ version = "0.2.0"
 license = "AGPL-3.0"
 authors = ["Simon Warta <simon@confio.tech>"]
 edition = "2018"
+resolver = "2"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -38,6 +39,9 @@ cw2 = "0.13"
 schemars = "0.8.3"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = "1.0"
+rand_chacha = { version = "0.3.1", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+shuffle = { git = "https://github.com/webmaster128/shuffle", branch = "rm-getrandom" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }

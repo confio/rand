@@ -1,14 +1,20 @@
+use std::convert::TryInto;
+
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
-    Storage, SubMsg,
+    coins, to_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdError,
+    StdResult, Storage, SubMsg,
 };
 use drand_verify::{derive_randomness, g1_from_variable, verify};
+use rand_chacha::ChaCha8Rng;
+use rand_core::SeedableRng;
+use shuffle::irs::Irs;
+use shuffle::shuffler::Shuffler;
 
 use crate::errors::ContractError;
 use crate::msg::{
     BountiesResponse, Bounty, ConfigResponse, ExecuteMsg, GetResponse, InstantiateMsg,
-    LatestResponse, QueryMsg,
+    LatestResponse, QueryMsg, ShuffleResponse,
 };
 use crate::state::{
     beacons_storage, beacons_storage_read, bounties_storage, bounties_storage_read, config,
@@ -129,6 +135,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::Get { round } => to_binary(&query_get(deps, round)?)?,
         QueryMsg::Latest {} => to_binary(&query_latest(deps)?)?,
         QueryMsg::Bounties {} => to_binary(&query_bounties(deps)?)?,
+        QueryMsg::Shuffle { round, from, to } => to_binary(&query_shuffle(deps, round, from, to)?)?,
     };
     Ok(response)
 }
@@ -180,6 +187,30 @@ fn query_bounties(deps: Deps) -> Result<BountiesResponse, ContractError> {
     Ok(BountiesResponse {
         bounties: bounties?,
     })
+}
+
+fn query_shuffle(
+    deps: Deps,
+    round: u64,
+    from: u32,
+    to: u32,
+) -> Result<ShuffleResponse, ContractError> {
+    if from > to {
+        return Err(ContractError::InvalidRange {});
+    }
+    let beacons = beacons_storage_read(deps.storage);
+    let randomness = beacons
+        .get(&round.to_be_bytes())
+        .ok_or(ContractError::BeaconNotFound {})?;
+    let randomness: [u8; 32] = randomness.try_into().unwrap();
+
+    let mut rng = ChaCha8Rng::from_seed(randomness);
+    let mut list: Vec<u32> = (from..=to).collect();
+    let mut irs = Irs::default();
+    irs.shuffle(&mut list, &mut rng)
+        .map_err(|err| StdError::generic_err(err))?;
+
+    Ok(ShuffleResponse { list })
 }
 
 fn get_bounty(storage: &dyn Storage, round: u64) -> StdResult<u128> {
@@ -698,5 +729,116 @@ mod tests {
                 ]
             }
         );
+    }
+
+    #[test]
+    fn query_shuffle_works() {
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("creator", &[]);
+        let msg = InstantiateMsg {
+            pubkey: pubkey_loe_mainnet(),
+            bounty_denom: BOUNTY_DENOM.into(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        // Beacon does not exist
+
+        let response: GetResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Get { round: 42 }).unwrap())
+                .unwrap();
+        assert_eq!(response.randomness, Binary::default());
+
+        // Beacon exists
+
+        let msg = ExecuteMsg::Add {
+            // curl -sS https://drand.cloudflare.com/public/42 | jq
+            round: 42,
+            previous_signature: hex::decode("a418fccbfaa0c84aba8cbcd4e3c0555170eb2382dfed108ecfc6df249ad43efe00078bdcb5060fe2deed4731ca5b4c740069aaf77927ba59c5870ab3020352aca3853adfdb9162d40ec64f71b121285898e28cdf237e982ac5c4deb287b0d57b").unwrap().into(),
+            signature: hex::decode("9469186f38e5acdac451940b1b22f737eb0de060b213f0326166c7882f2f82b92ce119bdabe385941ef46f72736a4b4d02ce206e1eb46cac53019caf870080fede024edcd1bd0225eb1335b83002ae1743393e83180e47d9948ab8ba7568dd99").unwrap().into(),
+        };
+        execute(deps.as_mut(), mock_env(), mock_info("anyone", &[]), msg).unwrap();
+
+        let response_data = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 42,
+                from: 0,
+                to: 4,
+            },
+        )
+        .unwrap();
+        let response: ShuffleResponse = from_binary(&response_data).unwrap();
+        assert_eq!(response.list, [0, 1, 4, 2, 3]);
+
+        let response_data = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 42,
+                from: 0,
+                to: 5,
+            },
+        )
+        .unwrap();
+        let response: ShuffleResponse = from_binary(&response_data).unwrap();
+        assert_eq!(response.list, [2, 0, 5, 3, 4, 1]);
+
+        let response_data = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 42,
+                from: 3,
+                to: 5,
+            },
+        )
+        .unwrap();
+        let response: ShuffleResponse = from_binary(&response_data).unwrap();
+        assert_eq!(response.list, [3, 5, 4]);
+
+        let response_data = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 42,
+                from: 5,
+                to: 5,
+            },
+        )
+        .unwrap();
+        let response: ShuffleResponse = from_binary(&response_data).unwrap();
+        assert_eq!(response.list, [5]);
+
+        let err = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 42,
+                from: 6,
+                to: 5,
+            },
+        )
+        .unwrap_err();
+        match err {
+            ContractError::InvalidRange {} => {}
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        let err = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Shuffle {
+                round: 33,
+                from: 4,
+                to: 10,
+            },
+        )
+        .unwrap_err();
+        match err {
+            ContractError::BeaconNotFound {} => {}
+            err => panic!("Unexpected error: {}", err),
+        }
     }
 }
