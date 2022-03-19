@@ -39,7 +39,7 @@ cw2 = "0.13"
 schemars = "0.8.3"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = "1.0"
-rand_chacha = { version = "0.3.1", default-features = false }
+rand_xoshiro = { version = "0.6.0", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 shuffle = { git = "https://github.com/webmaster128/shuffle", branch = "rm-getrandom" }
 

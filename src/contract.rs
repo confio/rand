@@ -6,8 +6,8 @@ use cosmwasm_std::{
     StdResult, Storage, SubMsg,
 };
 use drand_verify::{derive_randomness, g1_from_variable, verify};
-use rand_chacha::ChaCha8Rng;
 use rand_core::SeedableRng;
+use rand_xoshiro::Xoshiro128PlusPlus;
 use shuffle::{fy::FisherYates, shuffler::Shuffler};
 
 use crate::errors::ContractError;
@@ -201,9 +201,14 @@ fn query_shuffle(
     let randomness = beacons
         .get(&round.to_be_bytes())
         .ok_or(ContractError::BeaconNotFound {})?;
-    let randomness: [u8; 32] = randomness.try_into().unwrap();
+    let randomness: [u8; 16] = randomness[0..16].try_into().unwrap(); // Cut first 16 bytes from 32 byte value
 
-    let mut rng = ChaCha8Rng::from_seed(randomness);
+    // A PRNG that is not cryptographically secure.
+    // See https://docs.rs/rand/0.8.5/rand/rngs/struct.SmallRng.html
+    // where this is used for 32 bit systems.
+    // We don't use the SmallRng in order to get the same implementation
+    // in unit tests (64 bit dev machines) and the real contract (32 bit Wasm)
+    let mut rng = Xoshiro128PlusPlus::from_seed(randomness);
     let mut list: Vec<u32> = (from..=to).collect();
 
     let mut shuffler = FisherYates::default();
@@ -771,7 +776,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [2, 1, 0, 4, 3]);
+        assert_eq!(response.list, [4, 3, 0, 2, 1]);
 
         let response_data = query(
             deps.as_ref(),
@@ -784,7 +789,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [2, 5, 0, 1, 4, 3]);
+        assert_eq!(response.list, [5, 0, 4, 3, 2, 1]);
 
         let response_data = query(
             deps.as_ref(),
@@ -797,7 +802,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [5, 4, 3]);
+        assert_eq!(response.list, [5, 3, 4]);
 
         let response_data = query(
             deps.as_ref(),
