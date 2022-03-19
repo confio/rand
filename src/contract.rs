@@ -8,8 +8,7 @@ use cosmwasm_std::{
 use drand_verify::{derive_randomness, g1_from_variable, verify};
 use rand_chacha::ChaCha8Rng;
 use rand_core::SeedableRng;
-use shuffle::irs::Irs;
-use shuffle::shuffler::Shuffler;
+use shuffle::{fy::FisherYates, shuffler::Shuffler};
 
 use crate::errors::ContractError;
 use crate::msg::{
@@ -206,8 +205,10 @@ fn query_shuffle(
 
     let mut rng = ChaCha8Rng::from_seed(randomness);
     let mut list: Vec<u32> = (from..=to).collect();
-    let mut irs = Irs::default();
-    irs.shuffle(&mut list, &mut rng)
+
+    let mut shuffler = FisherYates::default();
+    shuffler
+        .shuffle(&mut list, &mut rng)
         .map_err(|err| StdError::generic_err(err))?;
 
     Ok(ShuffleResponse { list })
@@ -770,7 +771,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [0, 1, 4, 2, 3]);
+        assert_eq!(response.list, [2, 1, 0, 4, 3]);
 
         let response_data = query(
             deps.as_ref(),
@@ -783,7 +784,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [2, 0, 5, 3, 4, 1]);
+        assert_eq!(response.list, [2, 5, 0, 1, 4, 3]);
 
         let response_data = query(
             deps.as_ref(),
@@ -796,7 +797,7 @@ mod tests {
         )
         .unwrap();
         let response: ShuffleResponse = from_binary(&response_data).unwrap();
-        assert_eq!(response.list, [3, 5, 4]);
+        assert_eq!(response.list, [5, 4, 3]);
 
         let response_data = query(
             deps.as_ref(),

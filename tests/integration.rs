@@ -119,10 +119,6 @@ fn query_shuffle() {
     };
     let _res: Response = execute(&mut deps, mock_env(), info, msg).unwrap();
 
-    // Begin query test
-
-    let time_before = Instant::now();
-    let gas_before = deps.get_gas_left();
     let response: ShuffleResponse = from_binary(
         &query(
             &mut deps,
@@ -130,23 +126,49 @@ fn query_shuffle() {
             QueryMsg::Shuffle {
                 round: 72785,
                 from: 1,
-                to: 100,
+                to: 65,
             },
         )
         .unwrap(),
     )
     .unwrap();
+    assert_eq!(response.list.len(), 65);
     assert_eq!(
         response.list,
         [
-            47, 84, 53, 58, 10, 69, 21, 93, 24, 87, 65, 9, 82, 83, 54, 94, 90, 20, 22, 64, 61, 50,
-            39, 38, 86, 51, 27, 88, 33, 4, 25, 89, 14, 11, 66, 96, 31, 15, 30, 36, 48, 98, 32, 49,
-            1, 55, 46, 29, 70, 99, 12, 78, 68, 45, 2, 5, 71, 34, 63, 23, 59, 95, 81, 40, 72, 91,
-            97, 28, 8, 76, 79, 73, 26, 56, 67, 43, 37, 80, 92, 77, 74, 19, 62, 57, 13, 16, 6, 35,
-            60, 100, 42, 3, 41, 85, 44, 7, 52, 75, 18, 17
+            13, 25, 34, 56, 18, 11, 19, 49, 41, 15, 37, 53, 5, 58, 51, 2, 52, 21, 17, 33, 59, 28,
+            47, 1, 43, 29, 48, 24, 27, 8, 36, 16, 30, 44, 46, 50, 60, 54, 64, 9, 26, 35, 39, 31,
+            14, 55, 6, 3, 4, 65, 40, 10, 20, 32, 12, 38, 45, 23, 61, 7, 62, 22, 63, 42, 57
         ]
     );
-    let gas_used = gas_before - deps.get_gas_left();
-    println!("Shuffle query gas used: {}", gas_used);
-    println!("Shuffle query time elapsed: {:.2?}", time_before.elapsed());
+
+    // Test various list sizes
+
+    for count in [1, 5, 10, 25, 50, 100, 250, 500, 750, 900, 1000] {
+        let time_before = Instant::now();
+        let gas_before = deps.get_gas_left();
+        let response: ShuffleResponse = from_binary(
+            &query(
+                &mut deps,
+                mock_env(),
+                QueryMsg::Shuffle {
+                    round: 72785,
+                    from: 1,
+                    to: count,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(response.list.len(), count as usize);
+        let gas_used = gas_before - deps.get_gas_left();
+        let mega_gas_per_element = (gas_used as f32 / count as f32) / 1_000_000f32;
+        println!(
+            "{} | {} | {} | {:.2?}",
+            count,
+            gas_used,
+            mega_gas_per_element,
+            time_before.elapsed()
+        );
+    }
 }
