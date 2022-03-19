@@ -209,7 +209,7 @@ fn query_shuffle(
     let mut shuffler = FisherYates::default();
     shuffler
         .shuffle(&mut list, &mut rng)
-        .map_err(|err| StdError::generic_err(err))?;
+        .map_err(StdError::generic_err)?;
 
     Ok(ShuffleResponse { list })
 }
