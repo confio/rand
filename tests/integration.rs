@@ -10,8 +10,8 @@ use std::time::Instant;
 
 use rand::msg::{ExecuteMsg, InstantiateMsg, LatestResponse, QueryMsg, ShuffleResponse};
 
-// static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/rand.wasm");
-static WASM: &[u8] = include_bytes!("../artifacts/rand.wasm");
+static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/rand.wasm");
+// static WASM: &[u8] = include_bytes!("../artifacts/rand.wasm");
 
 fn pubkey_loe_mainnet() -> Binary {
     vec![
