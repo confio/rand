@@ -1,3 +1,10 @@
+⚠️ This project was created as a proof of concept for an article in 2020. It served its<br>
+⚠️ purpose. It was occasionally updated but does not belong to any actively maintained software<br>
+⚠️ stack. It's archived now to highlight that no changes are done here anymore and no contributions<br>
+⚠️ are accepted. It is likely insecure. Also please note that this code is licensed under AGPL which<br>
+⚠️ might be a problem for when you want to use it. The story of drand verificartion in CosmWasm<br>
+⚠️ is continued at [Nois](https://nois.network).
+
 # Rand – A drand client as a CosmWasm smart contract
 
 To learn more about this project, see this article: https://medium.com/confio/when-your-blockchain-needs-to-roll-the-dice-ed9da121f590
