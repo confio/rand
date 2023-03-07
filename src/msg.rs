@@ -25,9 +25,18 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Get { round: u64 },
+    Get {
+        round: u64,
+    },
     Latest {},
     Bounties {},
+    /// Creates a list of integers [from, to] and shuffles it
+    /// given the randomess of the provided round.
+    Shuffle {
+        round: u64,
+        from: u32,
+        to: u32,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -57,4 +66,10 @@ pub struct Bounty {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BountiesResponse {
     pub bounties: Vec<Bounty>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ShuffleResponse {
+    /// The shuffled list
+    pub list: Vec<u32>,
 }
